@@ -9,6 +9,10 @@ interface RequestOptions {
     server: Server
 }
 
+/**
+ * A request represents an incoming message that your server should respond to.
+ * Pogo passes a request instance as the first argument to route handlers.
+ */
 export default class Request {
     raw: http.ServerRequest;
     route: MatchedRoute;
@@ -29,7 +33,7 @@ export default class Request {
         this.referrer = this.headers.get('referer') || '';
         this.response = new Response();
         this.server = options.server;
-        this.state = cookie.getCookies(this as any);
+        this.state = cookie.getCookies(this);
         this.url = new URL(this.raw.url, 'http://' + this.headers.get('host'));
     }
     get body() {

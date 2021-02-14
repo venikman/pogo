@@ -6,12 +6,16 @@ interface ResponseOptions {
     body?: ResponseBody,
     headers?: HeadersInit,
     status?: number
-};
+}
 
 interface CookieOptions extends Omit<cookie.Cookie, 'name'> {
     name?: cookie.Cookie['name']
 }
 
+/**
+ * A response represents an outgoing message that will be returned by your server for a corresponding request.
+ * Use `h.response()` to create a response instance.
+ */
 export default class Response {
     body: ResponseBody;
     headers: Headers;
@@ -82,7 +86,7 @@ export default class Response {
     state(name: cookie.Cookie): this;
     state(name: string, value: string | CookieOptions): this;
     state(name: string | cookie.Cookie, value?: string | CookieOptions) {
-        cookie.setCookie(this as object, {
+        cookie.setCookie(this, {
             httpOnly : true,
             sameSite : 'Strict',
             secure   : true,
@@ -95,7 +99,7 @@ export default class Response {
         return this.header('Content-Type', mediaType);
     }
     unstate(name: string) {
-        cookie.delCookie(this as object, name);
+        cookie.deleteCookie(this, name);
         return this;
     }
 }

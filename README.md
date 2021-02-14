@@ -1,4 +1,4 @@
-# pogo [![Build status for Pogo](https://travis-ci.com/sholladay/pogo.svg?branch=master "Build Status")](https://travis-ci.com/sholladay/pogo "Builds")
+# pogo [![Build status for Pogo](https://travis-ci.com/sholladay/pogo.svg?branch=master "Build Status")](https://travis-ci.com/sholladay/pogo "Builds") [![TypeScript documentation for Pogo](https://doc.deno.land/badge.svg "TypeScript Docs")](https://doc.deno.land/https/deno.land/x/pogo/main.ts "TypeScript Docs")
 
 > Server framework for [Deno](https://github.com/denoland/deno)
 
@@ -6,7 +6,7 @@ Pogo is an easy-to-use, safe, and expressive framework for writing web servers a
 
 [Documentation](./docs)
 
-*Supports Deno v1.0.0 and higher.*
+*Supports Deno v1.2.0 and higher.*
 
 ## Contents
 
@@ -27,7 +27,7 @@ Pogo is an easy-to-use, safe, and expressive framework for writing web servers a
 
 Save the code below to a file named `server.js` and run it with a command like `deno run --allow-net server.js`. Then visit http://localhost:3000 in your browser and you should see "Hello, world!" on the page.
 
-```js
+```ts
 import pogo from 'https://deno.land/x/pogo/main.ts';
 
 const server = pogo.server({ port : 3000 });
@@ -49,18 +49,18 @@ Adding routes is easy, just call [`server.route()`](#serverrouteroute-options-ha
 
 Add routes in any order you want to, it's safe! Pogo orders them internally by specificity, such that their order of precedence is stable and predictable and avoids ambiguity or conflicts.
 
-```js
+```ts
 server.route({ method : 'GET', path : '/hi', handler : () => 'Hello!' });
 server.route({ method : 'GET', path : '/bye', handler : () => 'Goodbye!' });
 ```
 
-```js
+```ts
 server
     .route({ method : 'GET', path : '/hi', handler : () => 'Hello!' });
     .route({ method : 'GET', path : '/bye', handler : () => 'Goodbye!' });
 ```
 
-```js
+```ts
 server.route([
     { method : 'GET', path : '/hi', handler : () => 'Hello!' },
     { method : 'GET', path : '/bye', handler : () => 'Goodbye!' }
@@ -69,23 +69,33 @@ server.route([
 
 You can also configure the route to handle multiple methods by using an array, or `'*'` to handle all possible methods.
 
-```js
+```ts
 server.route({ method : ['GET', 'POST'], path : '/hi', handler : () => 'Hello!' });
 ```
 
-```js
+```ts
 server.route({ method : '*', path : '/hi', handler : () => 'Hello!' });
 ```
 
 ### Serve static files
 
-#### Using `h.file()` (recommended)
+#### Using `h.directory()` (recommended)
 
-You can use [`h.file()`](#hfilepath-options) to send a file. It will read the file, wrap the contents in a [`Response`](#response), and automatically set the correct [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header. It also has a security feature that prevents path traversal attacks, so it is safe to set the path dynamically (e.g. based on the request URL).
+You can use [`h.directory()`](#hdirectorypath-options) to send any file within a directory based on the request path.
 
-```js
+```ts
+server.router.get('/movies/{file*}', (request, h) => {
+    return h.directory('movies');
+});
+```
+
+#### Using `h.file()`
+
+You can use [`h.file()`](#hfilepath-options) to send a specific file. It will read the file, wrap the contents in a [`Response`](#response), and automatically set the correct [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header. It also has a security feature that prevents path traversal attacks, so it is safe to set the path dynamically (e.g. based on the request URL).
+
+```ts
 server.router.get('/', (request, h) => {
-    return h.file('./foo.jpg');
+    return h.file('dogs.jpg');
 });
 ```
 
@@ -95,18 +105,18 @@ If you need more control over how the file is read, there are also more low leve
 
 Using `Deno.readFile()` to get the data as an array of bytes:
 
-```js
+```ts
 server.router.get('/', async (request, h) => {
-    const buffer = await Deno.readFile('./foo.jpg');
+    const buffer = await Deno.readFile('./dogs.jpg');
     return h.response(buffer).type('image/jpeg');
 });
 ```
 
 Using `Deno.open()` to get the data as a stream to improve latency and memory usage:
 
-```js
+```ts
 server.router.get('/', async (request, h) => {
-    const stream = await Deno.open('./foo.jpg');
+    const stream = await Deno.open('./dogs.jpg');
     return h.response(stream).type('image/jpeg');
 });
 ```
@@ -119,10 +129,10 @@ You can do webpage templating with [React](https://reactjs.org/) inside of route
 
 Pogo automatically renders React elements using [`ReactDOMServer.renderToStaticMarkup()`](https://reactjs.org/docs/react-dom-server.html#rendertostaticmarkup) and sends the response as HTML.
 
-Save the code below to a file named `server.jsx` and run it with a command like `deno --allow-net server.jsx`. The `.jsx` extension is important, as it tells Deno to compile the JSX syntax. You can also use TypeScript by using `.tsx` instead of `.jsx`. The type definitions should load automatically from the Pika CDN, but if you run into problems when using `.tsx`, try loading them manually (see [deno_types](https://github.com/Soremwar/deno_types)).
+Save the code below to a file named `server.jsx` and run it with a command like `deno --allow-net server.jsx`. The `.jsx` extension is important, as it tells Deno to compile the JSX syntax. You can also use TypeScript by using `.tsx` instead of `.jsx`, in which case you should add an `// @deno-types` comment to load the type definitions for React (see [deno_types](https://github.com/Soremwar/deno_types)).
 
-```jsx
-import React from 'https://dev.jspm.io/react';
+```tsx
+import React from 'https://jspm.dev/react';
 import pogo from 'https://deno.land/x/pogo/main.ts';
 
 const server = pogo.server({ port : 3000 });
@@ -142,7 +152,7 @@ By injecting a request into the server directly, we can completely avoid the nee
 
 The server still processes the request using the same code paths that a normal HTTP request goes through, so you can rest assured that your tests are meaningful and realistic.
 
-```js
+```ts
 const response = await server.inject({
     method : 'GET',
     url    : '/users'
@@ -194,6 +204,7 @@ const response = await server.inject({
    - [`response.type(mediaType)`](#responsetypemediatype)
    - [`response.unstate(name)`](#responseunstatename)
  - [Response Toolkit](#response-toolkit)
+   - [`h.directory(path, options?)`](#hdirectorypath-options)
    - [`h.file(path, options?)`](#hfilepath-options)
    - [`h.redirect(url)`](#hredirecturl)
    - [`h.response(body?)`](#hresponsebody)
@@ -212,7 +223,7 @@ const response = await server.inject({
 
 Returns a [`Server`](#server) instance, which can then be used to add routes and start listening for requests.
 
-```js
+```ts
 const server = pogo.server();
 ```
 
@@ -226,7 +237,7 @@ Type: `function`
 
 Optional route handler to be used as a fallback for requests that do not match any other route. This overrides the default 404 Not Found behavior built into the framework. Shortcut for `server.router.all('/{catchAll*}', catchAll)`.
 
-```js
+```ts
 const server = pogo.server({
     catchAll(request, h) {
         return h.response('the void').code(404);
@@ -266,7 +277,7 @@ Any valid [port](https://en.wikipedia.org/wiki/Port_(computer_networking)) numbe
 
 Returns a [`Router`](#router) instance, which can then be used to add routes.
 
-```js
+```ts
 const router = pogo.router();
 ```
 
@@ -280,7 +291,7 @@ Performs a request directly to the server without using the network. Useful when
 
 Returns a `Promise` for a [`Response`](#response) instance.
 
-```js
+```ts
 const response = await server.inject({
     method : 'GET',
     url    : '/'
@@ -311,13 +322,13 @@ Adds a route to the server so that the server knows how to respond to requests t
 
 Returns the server so other methods can be chained.
 
-```js
+```ts
 server.route({ method : 'GET', path : '/', handler : () => 'Hello, World!' });
 ```
-```js
+```ts
 server.route({ method : 'GET', path : '/' }, () => 'Hello, World!');
 ```
-```js
+```ts
 server.route('/', { method : 'GET' }, () => 'Hello, World!');
 ```
 
@@ -373,7 +384,7 @@ Begins listening for requests on the [`hostname`](#hostname) and [`port`](#port)
 
 Returns a `Promise` that resolves when the server is listening.
 
-```js
+```ts
 await server.start();
 console.log('Listening for requests');
 ```
@@ -384,7 +395,7 @@ Stops accepting new requests. Any existing requests that are being processed wil
 
 Returns a `Promise` that resolves when the server has stopped listening.
 
-```js
+```ts
 await server.stop();
 console.log('Stopped listening for requests');
 ```
@@ -403,7 +414,7 @@ The HTTP [body](https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#Body)
 
 To get the body as a string, pass it to [`Deno.readAll()`](https://doc.deno.land/https/github.com/denoland/deno/releases/latest/download/lib.deno.d.ts#Deno.readAll) and decode the result, as shown below. Note that doing so will cause the entire body to be read into memory all at once, which is convenient and fine in most cases, but may be inappropriate for requests with a very large body.
 
-```js
+```ts
 server.router.post('/users', async (request) => {
     const bodyText = new TextDecoder().decode(await Deno.readAll(request.body));
     const user = JSON.parse(bodyText);
@@ -413,7 +424,7 @@ server.router.post('/users', async (request) => {
 
 If you want more control over how the stream is processed, instead of reading it all into memory, you can read raw bytes from the body in chunks with `request.body.read()`. It takes a [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array) as an argument to copy the bytes into and returns a `Promise` for either the number of bytes read or `null` when the body is finished being read. In the example below, we read up to a maximum of 20 bytes from the body.
 
-```js
+```ts
 server.router.post('/data', (request) => {
     const buffer = new Uint8Array(20);
     const numBytesRead = await request.body.read(buffer);
@@ -509,7 +520,8 @@ The response that will be sent for the request. To create a new response, see [`
 Type: `object`
 
 The route that is handling the request, as given to [`server.route()`](#serverrouteroute-options-handler), with the following additional properties:
- - `params` is an object with properties for each dynamic path parameter
+ - `paramNames` is an array of path parameter names
+ - `params` is an object with properties for each path parameter, where the key is the parameter name, and the value is the corresponding part of the request path
  - `segments` is an array of path parts, as in the values separated by `/` slashes in the route path
 
 #### request.search
@@ -567,7 +579,7 @@ Returns the response so other methods can be chained.
 
 *Tip: Use Deno's [`status`](https://deno.land/std/http/http_status.ts) constants to define the status code.*
 
-```js
+```ts
 import { Status as status } from 'https://deno.land/std/http/http_status.ts';
 const handler = (request, h) => {
     return h.response().code(status.Teapot);
@@ -634,7 +646,7 @@ Returns the response so other methods can be chained.
 
 All of the following forms are supported:
 
-```js
+```ts
 response.state('color', 'blue');
 response.state('color', { value : 'blue' });
 response.state({ name : 'color', value : 'blue' });
@@ -675,15 +687,53 @@ The response toolkit is an object that is passed to route handlers, with utility
 
 By convention, this object is assigned to a variable named `h` in code examples.
 
+#### h.directory(path, options?)
+
+Creates a new response with a body containing the contents of the directory or file specified by `path`.
+
+Returns a `Promise` for the response.
+
+```ts
+server.router.get('/movies/{file*}', (request, h) => {
+    return h.directory('movies');
+});
+```
+
+The directory or file that is served is determined by joining the path given to `h.directory()` with the value of the last path parameter of the route, if any. This allows you to control whether the directory root or files within it will be accessible, by using a particular type of path parameter or lack thereof.
+
+ - A route with `path: '/movies'` will only serve the directory itself, meaning it will only work if the `listing` option is enabled (or if the path given to `h.directory()` is actually a file instead of a directory), otherwise a `403 Forbidden` error will be thrown.
+ - A route with `path: '/movies/{file}'` will only serve the directory's children, meaning that a request to `/movies/` will return a `404 Not Found`, even if the `listing` option is enabled.
+ - A route with `path: '/movies/{file?}'` will serve the directory itself and the directory's children, but not any of the directory's grandchildren or deeper descendants.
+ - A route with `path: '/movies/{file*}'` will serve the directory itself and any of the directory's descendants, including children and granchildren.
+
+Note that the name of the path parameter (`file` in the example above) does not matter, it can be anything, and the name itself won't affect the directory helper or the response in any way. You should consider it a form of documentation and choose a name that is appropriate and intuitive for your use case. By convention, we usually name it `file`.
+
+##### options
+
+Type: `object`
+
+###### listing
+
+Type: `boolean`\
+Default: `false`
+
+If `true`, enables directory listings, so that when the request path matches a directory (as opposed to a file), the response will be an HTML page that shows some info about the directory's children. including file names, file sizes, and timestamps for when the files were created and modified.
+
+By default, directory listings are disabled for improved privacy, and instead a `403 Forbidden` error will be thrown when the request matches a directory.
+
+Note that this option does not affect which files within the directory are accessible. For example, with a route of `/movies/{file*}` and `listing: false`, the user could still access `/movies/secret.mov` if they knew (or were able to guess) that such a file exists. Conversely, with a route of `/movies` and `listing: true`, the user would be unable to access `/movies/secret.mov` or see its contents, but they could see that it exists in the directory listing.
+
+To control which files are accessible, you can change the route path parameter or use `h.file()` to serve specific files.
+
 #### h.file(path, options?)
 
 Creates a new response with a body containing the contents of the file specified by `path`. Automatically sets the [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) header based on the file extension.
 
 Returns a `Promise` for the response.
 
-```js
+```ts
 server.router.get('/', (request, h) => {
-    return h.file('./index.html');
+    return h.file('index.html');
 });
 ```
 
@@ -720,7 +770,7 @@ To copy routes from one router to another, see [`router.add()`](#routeraddroute-
 
 Note that you don't necessarily need to create a custom router. You only need to create your own router if you prefer the chaining syntax for defining routes and you want to export the routes from a file that doesn't have access to the server. In other words, a custom router is useful for larger applications.
 
-```js
+```ts
 const server = pogo.server();
 server.router
     .get('/', () => {
@@ -731,7 +781,7 @@ server.router
     });
 ```
 
-```js
+```ts
 const router = pogo.router()
     .get('/', () => {
       return 'Hello, World!';
@@ -765,7 +815,7 @@ Each argument has higher precedence than the previous argument, allowing you to 
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().add('/', { method : '*' }, () => 'Hello, World!');
 ```
 
@@ -775,7 +825,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with `'*'` as th
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().all('/', () => 'Hello, World!');
 ```
 
@@ -785,7 +835,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with [`'DELETE'`
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().delete('/', () => 'Hello, World!');
 ```
 
@@ -795,7 +845,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with [`'GET'`](h
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().get('/', () => 'Hello, World!');
 ```
 
@@ -811,7 +861,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with [`'PATCH'`]
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().patch('/', () => 'Hello, World!');
 ```
 
@@ -821,7 +871,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with [`'POST'`](
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().post('/', () => 'Hello, World!');
 ```
 
@@ -831,7 +881,7 @@ Shortcut for [`router.add()`](#routeraddroute-options-handler), with [`'PUT'`](h
 
 Returns the router so other methods can be chained.
 
-```js
+```ts
 const router = pogo.router().put('/', () => 'Hello, World!');
 ```
 
