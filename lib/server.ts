@@ -19,7 +19,9 @@ import Router, {
     RouteOptionsHasMethodAndPath,
     RouteOptionsHasPath
 } from './router.ts';
-import { RouteHandler, RouteOptions, ServerOptions } from './types.ts';
+import { RouteHandler, RouteOptions, ServerOptions, RequestWithRoute } from './types.ts';
+
+
 
 const getPathname = (path: string): string => {
     return new URL(path, 'invalid:/').pathname;
@@ -29,10 +31,12 @@ const getPathname = (path: string): string => {
  * A server represents your application and its ability to handle HTTP requests.
  * Use `pogo.server()` to create a server instance.
  */
+
 export default class Server {
     options: ServerOptions;
     raw?: http.Server;
     router: Router;
+    onRequest?: (request: Request) => void
     constructor(options: ServerOptions) {
         this.options = {
             hostname : 'localhost',
@@ -45,24 +49,37 @@ export default class Server {
         }
     }
     async inject(rawRequest: http.ServerRequest): Promise<Response> {
+        const request = new Request({
+            raw    : rawRequest,
+            server : this
+        });
+
+        this.onRequest?.(request);
+
         const route = this.router.lookup(rawRequest.method, getPathname(rawRequest.url));
 
         if (!route) {
             return serialize(bang.notFound());
         }
 
-        const request = new Request({
-            raw    : rawRequest,
-            route,
-            server : this
-        });
+        request.route  = route;
 
+        
+
+        const isRequestWithRoute = (val: any): val is RequestWithRoute => {
+            return Boolean(val.route)
+        };
         try {
-            return serialize(await route.handler(request, new Toolkit(request)));
+            if(isRequestWithRoute(request)) {
+                return serialize(await route.handler(request, new Toolkit(request)));
+            } else {
+                throw new Error()    
+            }
         }
         catch (error) {
             return serialize(bang.Bang.wrap(error));
         }
+        
     }
     async respond(request: http.ServerRequest) {
         const response = await this.inject(request);

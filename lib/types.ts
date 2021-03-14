@@ -8,6 +8,9 @@ export interface Route {
     handler: RouteHandler,
     vhost?: string
 }
+export interface RequestWithRoute extends Request {
+    route: MatchedRoute
+}
 
 export type RequestParams = { [param: string]: string };
 
